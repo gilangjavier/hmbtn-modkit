@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Validate mods and catalog
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python hm.py validate
+      - run: python hm.py catalog --check
+
+  build:
+    name: Build (no game data)
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Set up (toolchain, decomp, framework patches)
+        run: python hm.py setup
+      - name: Retail build still matches the original game
+        run: python hm.py build --no-disc
+      - name: Each mod builds on its own
+        run: |
+          for mod in $(ls mods); do
+            [ -f "mods/$mod/mod.json" ] || continue
+            echo "::group::$mod"
+            python hm.py build "$mod" --no-disc
+            echo "::endgroup::"
+          done
+      - name: Every mod builds together (and fits in RAM)
+        run: python hm.py build --all --no-disc
+      - name: The test mods build
+        run: python hm.py build autotest quickstart --no-disc

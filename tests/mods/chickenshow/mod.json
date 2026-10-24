@@ -1,0 +1,11 @@
+{
+  "id": "chickenshow",
+  "name": "Chicken Show",
+  "version": "1.0.0",
+  "description": "Test helper: keeps one chicken standing next to the player on the farm, to look at chicken sprite mods.",
+  "authors": ["hmbtn-modkit contributors"],
+  "license": "MIT",
+  "tags": ["test"],
+  "sources": ["chickenshow.c"],
+  "hooks": { "frame": "chickenshow_frame" }
+}

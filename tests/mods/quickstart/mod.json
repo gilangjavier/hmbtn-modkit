@@ -1,0 +1,10 @@
+{
+  "id": "quickstart",
+  "name": "Quickstart",
+  "version": "1.0.0",
+  "description": "Test helper: at 'Press START' the title goes straight into a new game, past the menu, the name entries and the birthday.",
+  "authors": ["hmbtn-modkit contributors"],
+  "license": "MIT",
+  "tags": ["test"],
+  "patches": ["patches/title_quickstart.patch"]
+}

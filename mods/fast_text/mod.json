@@ -1,0 +1,10 @@
+{
+  "id": "fast_text",
+  "name": "Fast Text",
+  "version": "1.0.0",
+  "description": "Dialogue text types out three times faster at the normal speed (1 vsync per glyph instead of 3).",
+  "authors": ["hmbtn-modkit contributors"],
+  "license": "MIT",
+  "tags": ["qol", "text", "patch"],
+  "patches": ["patches/fast_text.patch"]
+}

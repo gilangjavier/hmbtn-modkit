@@ -1,0 +1,13 @@
+diff --git a/src/overlay/11_GF_FARM/farm_main.c b/src/overlay/11_GF_FARM/farm_main.c
+index 84331d2..57b4cf5 100644
+--- a/src/overlay/11_GF_FARM/farm_main.c
++++ b/src/overlay/11_GF_FARM/farm_main.c
+@@ -125,7 +125,7 @@ static void farm_event_step(void) {
+         break;
+     case FARM_MODE_EXIT_LOAD:
+         player_reset_pose();
+-        fade_start_blend(20);
++        fade_start_blend(10);
+         estate_trigger_fire();
+         zone_event_pending = 0;
+         if (current_zone->event != ZONE_EVENT_NONE && (current_zone->flags & ZONE_FLAG_HAS_EVENT) == 0) {

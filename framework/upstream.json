@@ -1,0 +1,15 @@
+{
+  "repository": "https://github.com/coalslav/hmbtn-decomp",
+  "commit": "a2dd23e4554154bb34a4c8a09d1a74b4039028dc",
+  "patches": ["patches/0001-mod-hooks.patch"],
+  "disc_sha1": "cb26381fa1336bdd15f07469e59f1143ccf37b03",
+  "toolchain": {
+    "gcc_url": "https://github.com/decompals/old-gcc/releases/download/0.17/gcc-2.95.2-psx.tar.gz",
+    "gcc_sha256": "932ed3669710a82b12570c29c46ff42989b6505b2af10db84d4551d55dfc0b1c",
+    "psyq_urls": [
+      "https://psx.arthus.net/sdk/Psy-Q/Psy-Q_47.zip",
+      "https://archive.org/download/ps1_sdks/Runtime%20Library%204.7.zip"
+    ],
+    "psyq_sha256": "e3df241adde663fba1f5bff1f0070e0d32d9518ebb11d60a914e5e016f704745"
+  }
+}

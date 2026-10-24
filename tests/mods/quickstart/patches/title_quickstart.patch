@@ -1,0 +1,23 @@
+diff --git a/src/overlay/27_GF_TITLE/title.c b/src/overlay/27_GF_TITLE/title.c
+index 72b854b..deb31bd 100644
+--- a/src/overlay/27_GF_TITLE/title.c
++++ b/src/overlay/27_GF_TITLE/title.c
+@@ -2858,6 +2858,18 @@ static void title_sequence_step(void) {
+         break;
+     case TITLE_SEQ_START_WAIT:
+         title_draw_scene();
++        /* quickstart: straight into a new game, past the menu, the names and the birthday */
++        title_menu_page = TITLE_MENU_NEW_GAME;
++        game_state.player.name[0] = 0;
++        game_state.player.name[1] = 0xFFFF;
++        game_state.progress.estate.farmName[0] = 0;
++        game_state.progress.estate.farmName[1] = 0xFFFF;
++        game_state.animals.dog.actor.name[0] = 0;
++        game_state.animals.dog.actor.name[1] = 0xFFFF;
++        fade_start_out(TITLE_FADE_FRAMES, 0, 2);
++        sound_fade_out(TITLE_FADE_FRAMES);
++        title_sequence_state = TITLE_SEQ_NEW_GAME_FADE_WAIT;
++        break;
+         if (title_logo_frames >= TITLE_IDLE_FRAMES) {
+             title_sequence_done = 1;
+             title_sequence_state = TITLE_SEQ_DEMO_FADE_OUT;

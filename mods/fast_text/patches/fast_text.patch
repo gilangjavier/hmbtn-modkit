@@ -1,0 +1,13 @@
+diff --git a/src/main/text/text.c b/src/main/text/text.c
+index bc7c1bc..821cbf8 100644
+--- a/src/main/text/text.c
++++ b/src/main/text/text.c
+@@ -236,7 +236,7 @@ s32 text_get_palette(void)
+     return text_palette;
+ }
+ 
+-static u16 text_speed_intervals[] = {0, 3, 5, 0};
++static u16 text_speed_intervals[] = {0, 1, 5, 0};
+ 
+ /* Set the glyph interval from text_speed_intervals; an index past the table uses entry 1. */
+ void text_set_speed(s32 index)

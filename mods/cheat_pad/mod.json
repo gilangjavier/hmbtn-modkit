@@ -1,0 +1,11 @@
+{
+  "id": "cheat_pad",
+  "name": "Cheat Pad",
+  "version": "1.0.0",
+  "description": "Button-combo cheats on the farm: L1+R1+SELECT for 10,000 G, L1+R1+TRIANGLE to refill stamina and clear fatigue.",
+  "authors": ["hmbtn-modkit contributors"],
+  "license": "MIT",
+  "tags": ["cheat", "money", "stamina"],
+  "sources": ["cheat_pad.c"],
+  "hooks": { "frame": "cheat_pad_frame" }
+}

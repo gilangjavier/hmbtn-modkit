@@ -1,0 +1,10 @@
+{
+  "id": "snappy_fades",
+  "name": "Snappy Fades",
+  "version": "1.0.0",
+  "description": "Area transitions on the farm cross-fade in half the time (20 to 10 steps).",
+  "authors": ["hmbtn-modkit contributors"],
+  "license": "MIT",
+  "tags": ["qol", "graphics", "patch"],
+  "patches": ["patches/farm_blend.patch"]
+}

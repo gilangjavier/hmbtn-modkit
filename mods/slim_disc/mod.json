@@ -1,0 +1,9 @@
+{
+  "id": "slim_disc",
+  "name": "Slim Disc",
+  "version": "1.0.0",
+  "description": "Drops DUMMY.DAT, 33 MB of filler (copies of A_FILE data) the game never opens: the disc image shrinks from 214 MB to 176 MB.",
+  "authors": ["hmbtn-modkit contributors"],
+  "license": "MIT",
+  "tags": ["size", "disc"]
+}

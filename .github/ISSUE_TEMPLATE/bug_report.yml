@@ -1,0 +1,36 @@
+name: Bug report
+description: Something in the kit or a mod does not work
+labels: [bug]
+body:
+  - type: input
+    id: what
+    attributes:
+      label: What is broken
+      description: The command or the mod, e.g. `hm.py build cheat_pad` or "daily_allowance".
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps and output
+      description: What you ran, and the full output. For in-game bugs, what you did in the game.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: Windows + WSL distro, or Linux distro; Python version; emulator
+    validations:
+      required: true
+  - type: checkboxes
+    id: retail
+    attributes:
+      label: Retail build
+      options:
+        - label: "`python hm.py build` (no mods) reports `all 17 files match` on my machine"

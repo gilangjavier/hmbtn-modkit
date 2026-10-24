@@ -1,0 +1,9 @@
+{
+  "id": "pink_chickens",
+  "name": "Pink Chickens",
+  "version": "1.0.0",
+  "description": "Recolors the chickens' cream feathers pink (a palette-only sprite patch made with hm.py sprite).",
+  "authors": ["hmbtn-modkit contributors"],
+  "license": "MIT",
+  "tags": ["graphics", "sprites", "demo"]
+}

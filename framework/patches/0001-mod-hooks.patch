@@ -1,0 +1,468 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c5533b4..e7107c4 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -25,6 +25,11 @@ set(PSX_INCLUDE_DIRS
+     src)
+ list(TRANSFORM PSX_INCLUDE_DIRS PREPEND -I OUTPUT_VARIABLE psx_include_flags)
+ set(PSX_CPP_FLAGS ${psx_include_flags} -I${PSYQ_INCLUDE_DIR} -D_LANGUAGE_C -D__CHAR_UNSIGNED__)
++# Mods (cmake/mods.cmake): with any, the game's hooks compile in (src/main/mods.h).
++set(HMBTN_MODS "" CACHE STRING "The mods to build in (directories under mods/), in order")
++if(HMBTN_MODS)
++    list(APPEND PSX_CPP_FLAGS -DHMBTN_MODS -Imodkit)
++endif()
+ set(PSX_CC1_FLAGS -O2 -gcoff -quiet)
+ set(PSX_MASPSX_FLAGS --use-comm-section --aspsx-version=2.86)
+ set(PSX_AS_FLAGS -EL -Isrc/include -march=r3000 -mtune=r3000 -no-pad-sections -G0)
+@@ -37,8 +42,8 @@ set(PSX_COMPILE_TOOLS
+     ${CMAKE_SOURCE_DIR}/tools/maspsx/maspsx.py)
+ 
+ # The overlays' load regions: an overlay names its region in its psx_overlay().
+-psx_overlay_region(low 0x800B7E20)   # where the EXE's .bss ends
+-psx_overlay_region(high 0x8012DDE8)  # where FARM's image ends: 15_saveload, 30_GF_swind
++psx_overlay_region(low __psyq_bss_end)          # where the EXE's .bss ends (0x800B7E20 in the retail game)
++psx_overlay_region(high __ovl_11_GF_FARM_end)   # where FARM's image ends (0x8012DDE8): 15_saveload, 30_GF_swind
+ 
+ # Each image declares itself in its CMakeLists.txt (psx_exe, psx_overlay); then the EXE
+ # and the overlays link in one run, from a linker script generated from them.
+@@ -56,6 +61,7 @@ add_subdirectory(src/overlay/27_GF_TITLE)
+ add_subdirectory(src/overlay/28_GF_STAFF)
+ add_subdirectory(src/overlay/30_GF_swind)
+ add_subdirectory(src/overlay/31_gf_mcard)
++include(cmake/mods.cmake)
+ psx_program()
+ 
+ # A_FILE and the disc, from the original disc's data (-DORIGINAL_DISC=).
+diff --git a/cmake/disc.cmake b/cmake/disc.cmake
+index 315389a..f896535 100644
+--- a/cmake/disc.cmake
++++ b/cmake/disc.cmake
+@@ -40,7 +40,23 @@ add_custom_command(
+     COMMENT "Extracting the game's data from ${ORIGINAL_DISC}"
+     VERBATIM)
+ 
+-# A_FILE: the overlays built here, the other members the original's.
++# A_FILE: the overlays built here, the other members the original's, except where a mod
++# overrides one (HMBTN_AFILE_OVERRIDES: directories of member files, cmake/mods.cmake).
++set(afile_overrides)
++set(afile_override_files)
++foreach(directory IN LISTS HMBTN_AFILE_OVERRIDES)
++    list(APPEND afile_overrides --override ${directory})
++    file(GLOB files ${directory}/*)
++    list(APPEND afile_override_files ${files})
++endforeach()
++# Disc files a mod replaces (HMBTN_DISC_REPLACE: NAME=PATH, cmake/mods.cmake).
++set(disc_replace)
++set(disc_replace_files)
++foreach(item IN LISTS HMBTN_DISC_REPLACE)
++    list(APPEND disc_replace --replace ${item})
++    string(REGEX REPLACE "^[^=]*=" "" path ${item})
++    list(APPEND disc_replace_files ${path})
++endforeach()
+ file(STRINGS ${members} rows REGEX "^ *[0-9]+ +[^ ]+ +built ")
+ set(built)
+ foreach(row IN LISTS rows)
+@@ -51,7 +67,9 @@ add_custom_command(
+     OUTPUT ${afile_bin} ${afile_hdt}
+     COMMAND ${Python3_EXECUTABLE} tools/afile.py pack --members ${members}
+         --original ${original}/A_FILE --built ${CMAKE_BINARY_DIR} --bin ${afile_bin} --hdt ${afile_hdt}
++        ${afile_overrides}
+     DEPENDS ${original}.stamp ${members} ${built} ${CMAKE_SOURCE_DIR}/tools/afile.py
++        ${afile_override_files}
+     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+     COMMENT "Packing A_FILE"
+     VERBATIM)
+@@ -63,9 +81,10 @@ add_custom_command(
+     OUTPUT ${CMAKE_BINARY_DIR}/disc.bin ${CMAKE_BINARY_DIR}/disc.cue
+     COMMAND ${Python3_EXECUTABLE} tools/psx_disc.py build ${layout} --files ${original}/disc
+         --replace ${PSX_EXE}=${CMAKE_BINARY_DIR}/${PSX_EXE}
+-        --replace A_FILE.BIN=${afile_bin} --replace A_FILE.HDT=${afile_hdt}
++        --replace A_FILE.BIN=${afile_bin} --replace A_FILE.HDT=${afile_hdt} ${disc_replace}
+         -o ${CMAKE_BINARY_DIR}/disc.bin --cue ${CMAKE_BINARY_DIR}/disc.cue
+     DEPENDS ${layout} ${original}.stamp ${CMAKE_BINARY_DIR}/${PSX_EXE} ${afile_bin} ${afile_hdt}
++        ${disc_replace_files}
+         ${CMAKE_SOURCE_DIR}/tools/psx_disc.py
+     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+     COMMENT "Building the disc image"
+diff --git a/cmake/exe.ld.in b/cmake/exe.ld.in
+index 845a7d1..4fc076b 100644
+--- a/cmake/exe.ld.in
++++ b/cmake/exe.ld.in
+@@ -4,6 +4,9 @@
+     @DIR@/*(.rodata);
+     @DIR@/*(.text);
+     @DIR@/*(.data);
++    mods/*(.rodata);  /* the mods' code and data (cmake/mods.cmake); none in a retail build */
++    mods/*(.text);
++    mods/*(.data);
+     _gp = .;
+     __psyq_sdata_start = .;
+     @DIR@/*(.sdata);
+@@ -21,5 +24,7 @@
+     . = ALIGN(0x8);
+     __psyq_bss_start = .;
+     @DIR@/*(.bss);
++    mods/*(.bss);
++    . = ALIGN(0x8);  /* the overlays load here (overlay_low) */
+     __psyq_bss_end = .;
+ }
+diff --git a/cmake/mods.cmake b/cmake/mods.cmake
+new file mode 100644
+index 0000000..91c5723
+--- /dev/null
++++ b/cmake/mods.cmake
+@@ -0,0 +1,127 @@
++# Mods: C code linked into the EXE, hooks into the game, and replaced game data.
++#
++#   cmake -S . -B build -DHMBTN_MODS="cheat_pad;daily_allowance" ...
++#
++# Each mod is a directory mods/<id>/ with a manifest, mod.json:
++#
++#   {
++#     "id": "cheat_pad",
++#     "sources": ["cheat_pad.c"],
++#     "hooks": { "frame": "cheat_pad_frame" },
++#     ...                                     (name, version, authors: read by the tools)
++#   }
++#
++# The sources are compiled like the EXE's own (every header of the game is on the include
++# path, and modkit/hm.h is the mod API) and linked into the EXE after the game's code, so
++# they are always resident. "hooks" names the mod's function for each hook it wants
++# (src/main/mods.h). A mod can also hold:
++#
++#   mods/<id>/afile/<member file>   replaces that A_FILE member (disc/a_file.txt names)
++#   mods/<id>/disc/<disc path>      replaces that file of the disc
++#   mods/<id>/patches/*.patch       diffs against the decomp, applied before the build
++#                                   (by the mod tools, not here)
++#
++# With no mods the build is the retail one and still matches the original.
++
++set(HM_HOOKS boot frame scene minute new_day)
++set(HM_HOOK_SIGNATURE_boot "void @F@(void)")
++set(HM_HOOK_SIGNATURE_frame "void @F@(void)")
++set(HM_HOOK_SIGNATURE_scene "void @F@(s32 scene, s32 previous)")
++set(HM_HOOK_SIGNATURE_minute "void @F@(void)")
++set(HM_HOOK_SIGNATURE_new_day "void @F@(void)")
++set(HM_HOOK_CALL_scene "(scene, previous)")
++
++if(NOT HMBTN_MODS)
++    return()
++endif()
++
++# _hm_mod_read(<id>)
++#
++# Read mods/<id>/mod.json: append its sources to hm_sources and its hook functions to
++# hm_hook_<hook>.
++function(_hm_mod_read id)
++    set(dir ${CMAKE_SOURCE_DIR}/mods/${id})
++    if(NOT EXISTS ${dir}/mod.json)
++        message(FATAL_ERROR "HMBTN_MODS: mods/${id}/mod.json does not exist")
++    endif()
++    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${dir}/mod.json)
++    file(READ ${dir}/mod.json manifest)
++    string(JSON manifest_id ERROR_VARIABLE error GET "${manifest}" id)
++    if(error OR NOT manifest_id STREQUAL id)
++        message(FATAL_ERROR "mods/${id}/mod.json: \"id\" must be \"${id}\"")
++    endif()
++
++    set(sources ${hm_sources})
++    string(JSON count ERROR_VARIABLE error LENGTH "${manifest}" sources)
++    if(NOT error AND count GREATER 0)
++        math(EXPR last "${count} - 1")
++        foreach(i RANGE ${last})
++            string(JSON source GET "${manifest}" sources ${i})
++            list(APPEND sources mods/${id}/${source})
++        endforeach()
++    endif()
++    set(hm_sources ${sources} PARENT_SCOPE)
++
++    string(JSON count ERROR_VARIABLE error LENGTH "${manifest}" hooks)
++    if(NOT error AND count GREATER 0)
++        math(EXPR last "${count} - 1")
++        foreach(i RANGE ${last})
++            string(JSON hook MEMBER "${manifest}" hooks ${i})
++            string(JSON function GET "${manifest}" hooks ${hook})
++            if(NOT hook IN_LIST HM_HOOKS)
++                message(FATAL_ERROR "mods/${id}/mod.json: no hook \"${hook}\" (the hooks: ${HM_HOOKS})")
++            endif()
++            if(NOT function MATCHES "^[A-Za-z_][A-Za-z0-9_]*$")
++                message(FATAL_ERROR "mods/${id}/mod.json: hook ${hook}: \"${function}\" is not a C name")
++            endif()
++            set(functions ${hm_hook_${hook}})
++            list(APPEND functions ${function})
++            set(hm_hook_${hook} ${functions} PARENT_SCOPE)
++        endforeach()
++    endif()
++endfunction()
++
++set(hm_sources)
++foreach(hook IN LISTS HM_HOOKS)
++    set(hm_hook_${hook})
++endforeach()
++set(HMBTN_AFILE_OVERRIDES)
++set(HMBTN_DISC_REPLACE)
++foreach(mod IN LISTS HMBTN_MODS)
++    _hm_mod_read(${mod})
++    set(dir ${CMAKE_SOURCE_DIR}/mods/${mod})
++    if(IS_DIRECTORY ${dir}/afile)
++        list(APPEND HMBTN_AFILE_OVERRIDES ${dir}/afile)
++    endif()
++    file(GLOB_RECURSE disc_files RELATIVE ${dir}/disc ${dir}/disc/*)
++    foreach(file IN LISTS disc_files)
++        list(APPEND HMBTN_DISC_REPLACE ${file}=${dir}/disc/${file})
++    endforeach()
++    message(STATUS "mod: ${mod}")
++endforeach()
++
++# The hook dispatchers, one per hook, calling the mods' functions in mod order.
++set(registry "/* Generated by cmake/mods.cmake for HMBTN_MODS=${HMBTN_MODS}: do not edit. */\n")
++string(APPEND registry "#include \"types.h\"\n#include \"mods.h\"\n\n")
++foreach(hook IN LISTS HM_HOOKS)
++    set(call "()")
++    if(DEFINED HM_HOOK_CALL_${hook})
++        set(call ${HM_HOOK_CALL_${hook}})
++    endif()
++    foreach(F IN LISTS hm_hook_${hook})
++        string(CONFIGURE "${HM_HOOK_SIGNATURE_${hook}}" prototype @ONLY)
++        string(APPEND registry "${prototype};\n")
++    endforeach()
++    set(F mods_${hook})
++    string(CONFIGURE "${HM_HOOK_SIGNATURE_${hook}}" definition @ONLY)
++    string(APPEND registry "${definition} {\n")
++    foreach(F IN LISTS hm_hook_${hook})
++        string(APPEND registry "    ${F}${call};\n")
++    endforeach()
++    string(APPEND registry "}\n\n")
++endforeach()
++set(registry_file ${CMAKE_SOURCE_DIR}/mods/_registry.c)
++file(CONFIGURE OUTPUT ${registry_file} CONTENT "${registry}" @ONLY)
++
++psx_c_objects(hm_objects GP 0 OWN_COMMONS SOURCES mods/_registry.c ${hm_sources})
++_psx_add_image(mods "" ${hm_objects})
+diff --git a/cmake/overlay.ld.in b/cmake/overlay.ld.in
+index 156080d..3229cb7 100644
+--- a/cmake/overlay.ld.in
++++ b/cmake/overlay.ld.in
+@@ -6,5 +6,6 @@
+ @TEXT@
+ @DATA@
+ @BSS@
++    __ovl_@NAME@_end = .;  /* the image ends here; the rest is sector padding */
+     . = ALIGN(., 0x800);  /* the A_FILE member is whole sectors */
+ }
+diff --git a/cmake/program.ld.in b/cmake/program.ld.in
+index 751c770..54b1509 100644
+--- a/cmake/program.ld.in
++++ b/cmake/program.ld.in
+@@ -13,3 +13,13 @@ SECTIONS
+ {
+ @PSX_SECTIONS@/DISCARD/ : { *(*); }
+ }
++
++/* The RAM budget. Above FARM's image the farm keeps a sector-aligned window of
++ * FARM_IMAGE_SIZE (0x49000) bytes, then its section buffer, which must end below the
++ * frame work region at 0x801BE1B0 (main.c WORK_REGION) for the largest farm section
++ * (0x39800 bytes, section 22). Code a mod adds to the EXE or to FARM moves all of it up:
++ * the retail game leaves 0xDB90 bytes. What is left over is where event scripts load in
++ * the background (main_region_free_bytes); less of it only makes more of them load in
++ * the foreground. */
++ASSERT(overlay_low + ALIGN(overlay_high - overlay_low, 0x800) + 0x49000 + 0x39800 <= 0x801BE1B0,
++       "the EXE and FARM are too big: the largest farm section would overrun the work region at 0x801BE1B0")
+diff --git a/modkit/hm.h b/modkit/hm.h
+new file mode 100644
+index 0000000..6e1bf9e
+--- /dev/null
++++ b/modkit/hm.h
+@@ -0,0 +1,47 @@
++#ifndef HM_H
++#define HM_H
++
++/* The mod API: what a mod's C file includes. It pulls in the game's state and input,
++ * and adds a few helpers. Every header of the decomp is on the include path too, so a mod
++ * can include any of them (farm_state.h, player.h, items.h, event_flags.h, ...).
++ *
++ * The game's whole save state is `game_state` (src/main/game/farm_state.h); the player
++ * is game_state.player (src/overlay/11_GF_FARM/people/player.h). Code a mod links lives
++ * in the EXE and is always resident, but functions of an overlay (FARM, a minigame)
++ * exist only while that overlay is loaded: call one only from a hook that runs there
++ * (minute, new_day) or after checking hm_in_farm(). */
++
++#include "types.h"
++#include "main.h"
++#include "pad.h"
++#include "farm_state.h"
++
++/* The buttons of controller 1 (PAD_* in pad.h): held now, or pressed this frame. */
++#define hm_pad_held(buttons)    ((input_pad1->held & (buttons)) == (buttons))
++#define hm_pad_pressed(buttons) (hm_pad_held(buttons) && (input_pad1->pressed & (buttons)))
++
++/* The player and the date. */
++#define hm_player       (game_state.player)
++#define hm_date         (game_state.progress.clock.date)
++#define hm_time         (game_state.progress.clock.time.hm)
++
++/* The scene the main loop runs (SCENE_* in main.h). */
++extern s32 main_scene;
++#define hm_in_farm()    (main_scene == SCENE_FARM || main_scene == SCENE_FARM_MINIGAME_EXIT \
++                         || main_scene == SCENE_FARM_LOADED || main_scene == SCENE_FARM_SAVED \
++                         || main_scene == SCENE_FARM_MENU_RETURN || main_scene == SCENE_FARM_STAFF_EXIT)
++
++/* Add `amount` gold (negative to take), held to 0..9999999 as the game holds it. */
++#define HM_GOLD_MAX 9999999
++static void hm_gold_add(s32 amount) {
++    s32 gold = game_state.player.gold + amount;
++    if (gold > HM_GOLD_MAX) {
++        gold = HM_GOLD_MAX;
++    }
++    if (gold < 0) {
++        gold = 0;
++    }
++    game_state.player.gold = gold;
++}
++
++#endif
+diff --git a/src/main/main.c b/src/main/main.c
+index 8729a20..4173d95 100644
+--- a/src/main/main.c
++++ b/src/main/main.c
+@@ -24,6 +24,7 @@
+ #include "loading_screen.h"
+ #include "main.h"
+ #include "mcard.h"
++#include "mods.h"
+ #include "mg1.h"
+ #include "mg2.h"
+ #include "mg3.h"
+@@ -198,6 +199,7 @@ int main(void) {
+     text_set_palette(3);
+     text_set_speed(3);
+     prim_copy_pending = 0;
++    MODS_BOOT();
+     while(1) {
+         if (prim_copy_pending == 1) {
+             main_copy_prim_buffer(1, 0);
+@@ -416,6 +418,7 @@ static void main_run_frame(void) {
+             main_frame_begin();
+             screen_fade_frame();
+             screen_fade_step();
++            MODS_FRAME();
+             scene_frame_handler();
+             game_state.frameCount += 1;
+             vsync_before_draw = VSync(1);
+@@ -465,6 +468,7 @@ void main_request_scene(s32 scene) {
+     main_loop_running = 0;
+     main_scene = scene;
+     main_previous_scene = previous;
++    MODS_SCENE(scene, previous);
+ }
+ 
+ s32 main_get_previous_scene(void) {
+diff --git a/src/main/mods.h b/src/main/mods.h
+new file mode 100644
+index 0000000..7d194b6
+--- /dev/null
++++ b/src/main/mods.h
+@@ -0,0 +1,33 @@
++#ifndef MODS_H
++#define MODS_H
++
++/* The mod hooks: where the game calls into the mods a build links (cmake/mods.cmake).
++ * In a retail build (no HMBTN_MODS) every MODS_* call compiles to nothing, so the game
++ * still matches the original. The dispatchers are generated for each build: each calls
++ * the hooks of every mod that names one, in the order the mods are listed. */
++
++#include "types.h"
++
++#ifdef HMBTN_MODS
++void mods_boot(void);                       /* once, after the game is set up, before the title */
++void mods_frame(void);                      /* every frame, before the scene's frame handler */
++void mods_scene(s32 scene, s32 previous);   /* a scene change is requested */
++void mods_farm_load(void);                  /* the farm has been brought up (a day starts or a save loads) */
++void mods_minute(void);                     /* the farm clock passed a minute */
++void mods_new_day(void);                    /* the farm clock rolled over to a new day (6:00) */
++#define MODS_BOOT()                 mods_boot()
++#define MODS_FRAME()                mods_frame()
++#define MODS_SCENE(scene, previous) mods_scene((scene), (previous))
++#define MODS_FARM_LOAD()            mods_farm_load()
++#define MODS_MINUTE()               mods_minute()
++#define MODS_NEW_DAY()              mods_new_day()
++#else
++#define MODS_BOOT()
++#define MODS_FRAME()
++#define MODS_SCENE(scene, previous)
++#define MODS_FARM_LOAD()
++#define MODS_MINUTE()
++#define MODS_NEW_DAY()
++#endif
++
++#endif
+diff --git a/src/overlay/11_GF_FARM/world/clock.c b/src/overlay/11_GF_FARM/world/clock.c
+index 06cb907..dcf52ef 100644
+--- a/src/overlay/11_GF_FARM/world/clock.c
++++ b/src/overlay/11_GF_FARM/world/clock.c
+@@ -13,6 +13,7 @@
+ #include "family.h"
+ #include "farm_data.h"
+ #include "farm_state.h"
++#include "mods.h"
+ #include "player.h"
+ #include "screen_fade.h"
+ #include "villager.h"
+@@ -315,6 +316,12 @@ void clock_advance_minute(void) {
+         clock_check_event_due(&clock_events[i], CLOCK_EVENT_FIELD_MINUTE);
+     }
+     event_trigger_mode_set(1);
++#ifdef HMBTN_MODS
++    if (time->hour == CLOCK_DAY_START_HOUR && (changed & CLOCK_ROLLED_HOUR)) {
++        MODS_NEW_DAY();
++    }
++    MODS_MINUTE();
++#endif
+ }
+ 
+ static void clock_fast_forward(s32 frames) {
+diff --git a/tools/afile.py b/tools/afile.py
+index e29cb1a..ab9c22e 100644
+--- a/tools/afile.py
++++ b/tools/afile.py
+@@ -10,6 +10,8 @@ is zero-padded to whole 2048-byte sectors, so every offset is a multiple of 2048
+     afile.py pack --members disc/a_file.txt --original DIR --built DIR --bin OUT --hdt OUT
+         The archive: each member from the directory its row names (`original`: an
+         unpacked one; `built`: the project's build directory), in index order.
++        With --override DIR (repeatable; a later one wins) a member whose file name is
++        in DIR comes from there instead: how a mod replaces game data.
+ 
+ Standard library only.
+ """
+@@ -62,10 +64,14 @@ def unpack(members: list[Member], bin_path: Path, hdt_path: Path, out: Path) ->
+ 
+ 
+ def pack(members: list[Member], original: Path, built: Path, bin_path: Path,
+-         hdt_path: Path) -> None:
++         hdt_path: Path, overrides: list[Path] = ()) -> None:
+     offsets, archive = [0], bytearray()
+     for member in members:
+-        content = ((built if member.source == "built" else original) / member.file).read_bytes()
++        source = (built if member.source == "built" else original) / member.file
++        for directory in overrides:
++            if (directory / member.file).is_file():
++                source = directory / member.file
++        content = source.read_bytes()
+         archive += content + bytes(-len(content) % SECTOR)
+         offsets.append(len(archive))
+     bin_path.write_bytes(archive)
+@@ -85,12 +91,13 @@ def main(argv: list[str] | None = None) -> int:
+         else:
+             p.add_argument("--original", type=Path, required=True)
+             p.add_argument("--built", type=Path, required=True)
++            p.add_argument("--override", type=Path, action="append", default=[])
+     args = parser.parse_args(argv)
+     members = load_members(args.members)
+     if args.command == "unpack":
+         unpack(members, args.bin, args.hdt, args.out)
+     else:
+-        pack(members, args.original, args.built, args.bin, args.hdt)
++        pack(members, args.original, args.built, args.bin, args.hdt, args.override)
+     return 0
+ 
+ 

@@ -1,0 +1,17 @@
+{
+  "id": "autotest",
+  "name": "Autotest",
+  "version": "1.0.0",
+  "description": "Test harness: records every hook call in hm_test for tests/redux_check.lua and taps the buttons the harness asks for.",
+  "authors": ["hmbtn-modkit contributors"],
+  "license": "MIT",
+  "tags": ["test"],
+  "sources": ["autotest.c"],
+  "hooks": {
+    "boot": "autotest_boot",
+    "frame": "autotest_frame",
+    "scene": "autotest_scene",
+    "minute": "autotest_minute",
+    "new_day": "autotest_new_day"
+  }
+}

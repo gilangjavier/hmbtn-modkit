@@ -1,0 +1,22 @@
+name: Mod idea
+description: Suggest a mod someone could make
+labels: [mod idea]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What should change in the game? When does it happen, and what does the player see?
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Hints
+      description: Anything you already know about where this lives in the game's code or data.
+  - type: checkboxes
+    id: build
+    attributes:
+      label: Would you like to build it?
+      options:
+        - label: I would like to work on this myself

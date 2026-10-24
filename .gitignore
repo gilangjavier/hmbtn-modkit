@@ -1,0 +1,29 @@
+# Game data never goes in this repository.
+*.bin
+*.cue
+*.iso
+*.img
+*.ecm
+*.chd
+*.pbp
+SLUS_*
+
+# Generated and fetched state.
+/.hm/
+/out/
+/MODS.md.tmp
+__pycache__/
+*.pyc
+
+# Editors and OS.
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Where `hm.py add` installed a mod from.
+mods/*/.source
+
+# PCSX-Redux crash-reporter state, if it is launched from the repo root.
+.sentry-native/

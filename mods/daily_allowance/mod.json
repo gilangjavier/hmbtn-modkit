@@ -1,0 +1,11 @@
+{
+  "id": "daily_allowance",
+  "name": "Daily Allowance",
+  "version": "1.0.0",
+  "description": "500 G every morning at 6:00, plus 1 G for every in-game minute.",
+  "authors": ["hmbtn-modkit contributors"],
+  "license": "MIT",
+  "tags": ["money", "economy"],
+  "sources": ["allowance.c"],
+  "hooks": { "new_day": "allowance_new_day", "minute": "allowance_minute" }
+}

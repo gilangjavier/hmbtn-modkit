@@ -1,0 +1,6 @@
+# Everything is LF: the PlayStation compiler (GCC 2.95) rejects CRLF sources, and
+# patches must apply byte for byte.
+* text=auto eol=lf
+*.png binary
+*.xdelta binary
+*.tim binary
