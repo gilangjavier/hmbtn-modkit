@@ -29,7 +29,7 @@ for your Linux password.
 ## 2. Set up
 
 ```sh
-git clone https://github.com/OWNER/hmbtn-modkit
+git clone https://github.com/gilangjavier/hmbtn-modkit
 cd hmbtn-modkit
 python hm.py setup --disc "C:\Games\Harvest Moon - Back to Nature (USA).bin"
 ```

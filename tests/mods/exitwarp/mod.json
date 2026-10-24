@@ -1,0 +1,11 @@
+{
+  "id": "exitwarp",
+  "name": "Exit Warp",
+  "version": "1.0.0",
+  "description": "Test helper: once the player is free on the farm, moves the player into the first plain exit zone so the zone-exit transition (FARM_MODE_EXIT_LOAD) runs, once.",
+  "authors": ["hmbtn-modkit contributors"],
+  "license": "MIT",
+  "tags": ["test"],
+  "sources": ["exitwarp.c"],
+  "hooks": { "frame": "exitwarp_frame" }
+}

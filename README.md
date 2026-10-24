@@ -2,7 +2,7 @@
 
 **A mod kit and community mod collection for *Harvest Moon: Back to Nature* (PlayStation, USA).**
 
-[![CI](https://github.com/OWNER/hmbtn-modkit/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/hmbtn-modkit/actions/workflows/ci.yml)
+[![CI](https://github.com/gilangjavier/hmbtn-modkit/actions/workflows/ci.yml/badge.svg)](https://github.com/gilangjavier/hmbtn-modkit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Mods](https://img.shields.io/badge/mods-catalog-green.svg)](MODS.md)
 
@@ -52,7 +52,7 @@ no game data and never will.
 | macOS | Not supported directly: use a Linux VM or container |
 
 ```sh
-git clone https://github.com/OWNER/hmbtn-modkit
+git clone https://github.com/gilangjavier/hmbtn-modkit
 cd hmbtn-modkit
 python hm.py setup --disc "/path/to/Harvest Moon - Back to Nature (USA).bin"
 python hm.py build                      # the retail game: must say "all 17 files match"
